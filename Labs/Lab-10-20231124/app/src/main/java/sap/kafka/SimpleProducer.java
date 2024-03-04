@@ -1,68 +1,49 @@
 package sap.kafka;
 
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+
 import java.util.Properties;
-import java.time.Duration;
-import java.util.Arrays;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
 
-public class SimpleConsumer {
-    public static void main(String[] args) throws Exception {
+public class SimpleProducer {
 
-        // Define the name of the Kafka topic we want to consume from
+    public static void main(String[] args) {
+
+        //Assign topicName to string variable
         String topicName = "my-event-channel";
 
-        // Create a Properties object to hold the configuration settings for the Kafka
-        // Consumer
+        // create instance for properties to access producer configs
         Properties props = new Properties();
 
-        // Specify the address of the Kafka brokers
+        //Assign localhost id
         props.put("bootstrap.servers", "localhost:29092");
 
-        // Specify the consumer group this consumer will belong to
-        props.put("group.id", "test");
+        //Set acknowledgements for producer requests.
+        props.put("acks", "all");
 
-        // Enable automatic commit of offsets
-        props.put("enable.auto.commit", "true");
+        //If the request fails, the producer can automatically retry,
+        props.put("retries", 0);
 
-        // Specify the frequency of auto-commit in milliseconds
-        props.put("auto.commit.interval.ms", "1000");
+        //Specify buffer size in config
+        props.put("batch.size", 16384);
 
-        // Specify the session timeout in milliseconds
-        props.put("session.timeout.ms", "30000");
+        //Reduce the no of requests less than 0
+        props.put("linger.ms", 1);
 
-        // Specify the deserializer class for keys
-        props.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        //The buffer.memory controls the total amount of memory available to the producer for buffering.
+        props.put("buffer.memory", 33554432);
 
-        // Specify the deserializer class for values
-        props.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
-        // Create a KafkaConsumer instance and subscribe to the specified topic
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(props);
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
 
-        // Subscribe to the specified topic
-        consumer.subscribe(Arrays.asList(topicName));
+        Producer<String, String> producer = new KafkaProducer<String, String>(props);
 
-        // Print the name of the topic we're subscribed to
-        System.out.println("Subscribed to topic " + topicName);
-
-        // Continuously poll for new data records from the Kafka topic
-        while (true) {
-            // Poll the Kafka server for data, waiting indefinitely if none arrives
-            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(Long.MAX_VALUE));
-
-            // Placeholder for application-specific processing of the data
-            // process(records);
-
-            // Iterate over each record from the batch of records fetched from Kafka
-            for (ConsumerRecord<String, String> record : records)
-
-                // Print the offset, key, and value for each record
-                System.out.printf("offset = %d, key = %s, value = %s\n",
-                        record.offset(), record.key(), record.value());
-            // Synchronously commit the current offset of this consumer
-            consumer.commitSync();
-        }
+        for (int i = 0; i < 10; i++)
+            producer.send(new ProducerRecord<String, String>(topicName, Integer.toString(i), Integer.toString(i)));
+        System.out.println("Message sent successfully");
+        producer.close();
     }
 }
+
